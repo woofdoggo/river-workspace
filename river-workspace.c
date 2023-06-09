@@ -1,16 +1,17 @@
 #include "river-control-unstable-v1.h"
 #include "river-status-unstable-v1.h"
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wayland-client.h>
 
-static int tag_count = 0;
-
 static enum { LEFT, RIGHT } direction;
 static enum { FOCUS, WINDOW } shift_mode;
+static int tag_count = 0;
+static bool done = false;
 
 static struct wl_display *wl_display = NULL;
 static struct wl_output *wl_output = NULL;
@@ -67,6 +68,11 @@ on_output_status_listener_layout_name_clear(void *data, struct zriver_output_sta
 static void
 on_output_status_listener_focused_tags(void *data, struct zriver_output_status_v1 *status,
                                        uint32_t tagmask) {
+    if (done) {
+        return;
+    }
+    done = true;
+
     uint32_t newmask = 0;
     if (direction == RIGHT) {
         for (int i = 0; i < tag_count; i++) {
@@ -85,6 +91,7 @@ on_output_status_listener_focused_tags(void *data, struct zriver_output_status_v
     snprintf(tags, 32, "%d", newmask);
 
     if (shift_mode == FOCUS) {
+        printf("%s\n", tags);
         set_tags("set-focused-tags", tags);
     } else {
         set_tags("set-view-tags", tags);
