@@ -24,8 +24,8 @@ static struct zriver_status_manager_v1 *river_status_manager = NULL;
 static const struct zriver_output_status_v1_listener output_status_listener;
 
 static void
-set_focused_tags(char *mask) {
-    zriver_control_v1_add_argument(river_control, "set-focused-tags");
+set_tags(const char *command, char *mask) {
+    zriver_control_v1_add_argument(river_control, command);
     zriver_control_v1_add_argument(river_control, mask);
 
     // We don't care about the callback for success/failure.
@@ -67,10 +67,6 @@ on_output_status_listener_layout_name_clear(void *data, struct zriver_output_sta
 static void
 on_output_status_listener_focused_tags(void *data, struct zriver_output_status_v1 *status,
                                        uint32_t tagmask) {
-    if (shift_mode == WINDOW) {
-        return;
-    }
-
     uint32_t newmask = 0;
     if (direction == RIGHT) {
         for (int i = 0; i < TAG_COUNT; i++) {
@@ -87,7 +83,13 @@ on_output_status_listener_focused_tags(void *data, struct zriver_output_status_v
     }
     char *tags = malloc(32);
     snprintf(tags, 32, "%d", newmask);
-    set_focused_tags(tags);
+
+    if (shift_mode == FOCUS) {
+        set_tags("set-focused-tags", tags);
+    } else {
+        set_tags("set-view-tags", tags);
+        set_tags("set-focused-tags", tags);
+    }
 }
 
 static void
@@ -99,8 +101,7 @@ on_output_status_listener_urgent_tags(void *data, struct zriver_output_status_v1
 static void
 on_output_status_listener_view_tags(void *data, struct zriver_output_status_v1 *status,
                                     struct wl_array *array) {
-    // TODO: Maybe it's possible to extract the tags of the focused view specifically?
-    // Until then, this is a noop.
+    // Noop, we don't care about view tags.
 }
 
 static void
@@ -114,8 +115,7 @@ on_seat_status_focused_output(void *data, struct zriver_seat_status_v1 *status,
 
 static void
 on_seat_status_focused_view(void *data, struct zriver_seat_status_v1 *status, const char *view) {
-    // TODO: Maybe relevant for view switching?
-    // Until then, this is a noop.
+    // Noop, we don't care about focused view.
 }
 
 static void
