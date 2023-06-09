@@ -7,7 +7,7 @@
 #include <string.h>
 #include <wayland-client.h>
 
-#define TAG_COUNT 4
+static int tag_count = 0;
 
 static enum { LEFT, RIGHT } direction;
 static enum { FOCUS, WINDOW } shift_mode;
@@ -69,15 +69,15 @@ on_output_status_listener_focused_tags(void *data, struct zriver_output_status_v
                                        uint32_t tagmask) {
     uint32_t newmask = 0;
     if (direction == RIGHT) {
-        for (int i = 0; i < TAG_COUNT; i++) {
+        for (int i = 0; i < tag_count; i++) {
             if (tagmask & (1 << i)) {
-                newmask |= 1 << ((i + 1 + TAG_COUNT) % TAG_COUNT);
+                newmask |= 1 << ((i + 1 + tag_count) % tag_count);
             }
         }
     } else {
-        for (int i = 0; i < TAG_COUNT; i++) {
+        for (int i = 0; i < tag_count; i++) {
             if (tagmask & (1 << i)) {
-                newmask |= 1 << ((i - 1 + TAG_COUNT) % TAG_COUNT);
+                newmask |= 1 << ((i - 1 + tag_count) % tag_count);
             }
         }
     }
@@ -150,25 +150,44 @@ static const struct zriver_seat_status_v1_listener seat_status_listener = {
     .unfocused_output = on_seat_status_unfocused_output,
 };
 
+void
+help(int argc, char *argv[]) {
+    printf("USAGE: %s TAG_COUNT [focus|window] [left|right]\n",
+           argc > 0 ? argv[0] : "river-workspace");
+}
+
 int
 main(int argc, char *argv[]) {
-    if (argc != 3) {
+    if (argc != 4) {
+        help(argc, argv);
         return 1;
     }
-    if (strcmp(argv[1], "focus") == 0) {
+    if (!(tag_count = atoi(argv[1]))) {
+        help(argc, argv);
+        return 1;
+    } else {
+        if (tag_count < 1 || tag_count > 32) {
+            printf("invalid tag count [1..32]\n");
+            return 1;
+        }
+    }
+    if (strcmp(argv[2], "focus") == 0) {
         shift_mode = FOCUS;
-    } else if (strcmp(argv[1], "window") == 0) {
+    } else if (strcmp(argv[2], "window") == 0) {
         shift_mode = WINDOW;
     } else {
+        help(argc, argv);
         return 1;
     }
-    if (strcmp(argv[2], "left") == 0) {
+    if (strcmp(argv[3], "left") == 0) {
         direction = LEFT;
-    } else if (strcmp(argv[2], "right") == 0) {
+    } else if (strcmp(argv[3], "right") == 0) {
         direction = RIGHT;
     } else {
+        help(argc, argv);
         return 1;
     }
+
     wl_display = wl_display_connect(NULL);
     assert(wl_display);
     wl_registry = wl_display_get_registry(wl_display);
